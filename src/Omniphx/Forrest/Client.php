@@ -4,7 +4,6 @@ namespace Omniphx\Forrest;
 
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\Message\ResponseInterface;
 use Omniphx\Forrest\Exceptions\InvalidLoginCreditialsException;
 use Omniphx\Forrest\Exceptions\SalesforceException;
 use Omniphx\Forrest\Exceptions\TokenExpiredException;
@@ -135,13 +134,14 @@ abstract class Client
         RedirectInterface $redirect,
         StorageInterface $storage,
         $settings
-    ) {
-        $this->httpClient = $httpClient;
-        $this->storage = $storage;
-        $this->redirect = $redirect;
-        $this->input = $input;
-        $this->event = $event;
-        $this->settings = $settings;
+    )
+    {
+        $this->httpClient  = $httpClient;
+        $this->storage     = $storage;
+        $this->redirect    = $redirect;
+        $this->input       = $input;
+        $this->event       = $event;
+        $this->settings    = $settings;
         $this->credentials = $settings['credentials'];
     }
 
@@ -155,12 +155,14 @@ abstract class Client
      */
     public function request($url, $options)
     {
-        $this->url = $url;
+        $this->url     = $url;
         $this->options = array_replace_recursive($this->settings['defaults'], $options);
 
         try {
             return $this->formatRequest();
-        } catch (TokenExpiredException $e) {
+        }
+        catch (TokenExpiredException $e)
+        {
             $this->refresh();
 
             return $this->formatRequest();
@@ -169,22 +171,23 @@ abstract class Client
 
     private function formatRequest()
     {
-        switch ($this->options['format']) {
-            case 'json':
-                return $this->handleRequest(new JSONFormatter());
-                break;
+        switch ($this->options['format'])
+        {
+        case 'json':
+            return $this->handleRequest(new JSONFormatter());
+            break;
 
-            case 'xml':
-                return $this->handleRequest(new XMLFormatter());
-                break;
+        case 'xml':
+            return $this->handleRequest(new XMLFormatter());
+            break;
 
-            case 'urlencoded':
-                return $this->handleRequest(new URLEncodedFormatter());
-                break;
+        case 'urlencoded':
+            return $this->handleRequest(new URLEncodedFormatter());
+            break;
 
-            default:
-                return $this->handleRequest(new JSONFormat());
-                break;
+        default:
+            return $this->handleRequest(new JSONFormat());
+            break;
         }
     }
 
@@ -197,11 +200,15 @@ abstract class Client
         $this->parameters['headers'] = $this->headers;
 
         if (isset($this->options['body']))
+        {
             $this->parameters['body'] = $requestFormatter->setBody($this->options['body']);
+        }
 
         try {
             $response = $this->httpClient->request($this->options['method'], $this->url, $this->parameters);
-        } catch (RequestException $e) {
+        }
+        catch (RequestException $e)
+        {
             $this->assignExceptions($e);
         }
 
@@ -222,7 +229,10 @@ abstract class Client
 
     private function setCompression()
     {
-        if (!$this->options['compression']) return;
+        if (!$this->options['compression'])
+        {
+            return;
+        }
 
         $this->headers['Accept-Encoding']  = $this->options['compressionType'];
         $this->headers['Content-Encoding'] = $this->options['compressionType'];
@@ -325,11 +335,13 @@ abstract class Client
     private function sendRequest($path, $requestBody, $options, $method)
     {
         $url = $this->getInstanceUrl();
-        $url .= '/'.trim($path, "/\t\n\r\0\x0B");
+        $url .= '/' . trim($path, "/\t\n\r\0\x0B");
 
         $options['method'] = $method;
         if (!empty($requestBody))
+        {
             $options['body'] = $requestBody;
+        }
 
         return $this->request($url, $options);
     }
@@ -382,9 +394,9 @@ abstract class Client
      */
     public function identity($options = [])
     {
-        $token = $this->getTokenData();
+        $token       = $this->getTokenData();
         $accessToken = $token['access_token'];
-        $url = $token['id'];
+        $url         = $token['id'];
 
         $options['headers']['Authorization'] = "OAuth $accessToken";
 
@@ -591,13 +603,14 @@ abstract class Client
         $url .= urlencode($query);
 
         $parameters = [
-            'language'      => $this->settings['language'],
+            'language' => $this->settings['language'],
             'publishStatus' => 'Online',
         ];
 
-        if (isset($options['parameters'])) {
+        if (isset($options['parameters']))
+        {
             $parameters = array_replace_recursive($parameters, $options['parameters']);
-            $url .= '&'.http_build_query($parameters);
+            $url .= '&' . http_build_query($parameters);
         }
 
         $suggestedArticles = $this->request($url, $options);
@@ -626,9 +639,10 @@ abstract class Client
 
         $parameters = ['language' => $this->settings['language']];
 
-        if (isset($options['parameters'])) {
+        if (isset($options['parameters']))
+        {
             $parameters = array_replace_recursive($parameters, $options['parameters']);
-            $url .= '&'.http_build_query($parameters);
+            $url .= '&' . http_build_query($parameters);
         }
 
         $suggestedQueries = $this->request($url, $options);
@@ -652,9 +666,10 @@ abstract class Client
 
         $parameters = [];
 
-        if (isset($options['parameters'])) {
+        if (isset($options['parameters']))
+        {
             $parameters = array_replace_recursive($parameters, $options['parameters']);
-            $url .= '?'.http_build_query($parameters);
+            $url .= '?' . http_build_query($parameters);
         }
 
         return $this->request($url, $options);
@@ -684,6 +699,7 @@ abstract class Client
     public function __call($name, $arguments)
     {
         $url = $this->getInstanceUrl();
+
         $url .= $this->storage->get('resources')[$name];
         $url .= $this->appendURL($arguments);
 
@@ -692,29 +708,52 @@ abstract class Client
         return $this->request($url, $options);
     }
 
-    private function appendURL($arguments) {
-        if (!isset($arguments[0])) return '';
-        if (!is_string($arguments[0])) return '';
+    private function appendURL($arguments)
+    {
+        if (!isset($arguments[0]))
+        {
+            return '';
+        }
+
+        if (!is_string($arguments[0]))
+        {
+            return '';
+        }
 
         return "/$arguments[0]";
     }
 
-    private function setOptions($arguments) {
+    private function setOptions($arguments)
+    {
         $options = [];
-        if (empty($arguments)) return $options;
+        if (empty($arguments))
+        {
+            return $options;
+        }
 
-        $this->setArgument($arguments[0], $options);
-        $this->setArgument($arguments[1], $options);
+        $options = $this->setArgument($arguments[0], $options);
+        $options = $this->setArgument($arguments[1], $options);
 
         return $options;
     }
 
-    private function setArgument($argument, $options) {
-        if (!isset($argument)) return;
-        if (!is_array($argument)) return;
-        foreach ($argument as $key => $value) {
+    private function setArgument($argument, $options)
+    {
+        if (!isset($argument))
+        {
+            return;
+        }
+
+        if (!is_array($argument))
+        {
+            return;
+        }
+
+        foreach ($argument as $key => $value)
+        {
             $options[$key] = $value;
         }
+        return $options;
     }
 
     /**
@@ -724,7 +763,8 @@ abstract class Client
      */
     public function getTokenData()
     {
-        if (empty($this->tokenData)) {
+        if (empty($this->tokenData))
+        {
             $this->tokenData = (array) $this->storage->getTokenData();
         }
 
@@ -754,7 +794,9 @@ abstract class Client
     {
         $url = $this->settings['instanceURL'];
         if (empty($url))
+        {
             $url = $this->getTokenData()['instance_url'];
+        }
 
         return $url;
     }
@@ -780,22 +822,36 @@ abstract class Client
         $versions = $this->versions();
         $this->storeConfiguredVersion($versions);
 
-        if($this->storage->has('version')) return;
+        if ($this->storage->has('version'))
+        {
+            return;
+        }
+
         $this->storeLatestVersion($versions);
     }
 
     private function storeConfiguredVersion($versions)
     {
         $configVersion = $this->settings['version'];
-        if (empty($configVersion)) return;
+        if (empty($configVersion))
+        {
+            return;
+        }
 
-        foreach($versions as $version)
+        foreach ($versions as $version)
+        {
             $this->determineIfConfiguredVersionExists($version, $configVersion);
+        }
+
     }
 
     private function determineIfConfiguredVersionExists($version, $configVersion)
     {
-        if ($version['version'] !== $configVersion) return;
+        if ($version['version'] !== $configVersion)
+        {
+            return;
+        }
+
         $this->storage->put('version', $version);
     }
 
@@ -816,7 +872,9 @@ abstract class Client
     {
         try {
             $this->storage->get('version');
-        } catch (\Exception $e) {
+        }
+        catch (\Exception $e)
+        {
             $this->storeVersion();
         }
 
@@ -826,7 +884,8 @@ abstract class Client
 
     protected function handleAuthenticationErrors(array $response)
     {
-        if (isset($response['error'])) {
+        if (isset($response['error']))
+        {
             throw new InvalidLoginCreditialsException($response['error_description']);
         }
     }
@@ -841,11 +900,16 @@ abstract class Client
      */
     private function assignExceptions(RequestException $e)
     {
-        if ($e->hasResponse() && $e->getResponse()->getStatusCode() == 401) {
+        if ($e->hasResponse() && $e->getResponse()->getStatusCode() == 401)
+        {
             throw new TokenExpiredException('Salesforce token has expired', $e);
-        } elseif ($e->hasResponse()) {
+        }
+        elseif ($e->hasResponse())
+        {
             throw new SalesforceException('Salesforce response error', $e);
-        } else {
+        }
+        else
+        {
             throw new SalesforceException('Invalid request: %s', $e);
         }
     }
